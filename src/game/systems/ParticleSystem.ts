@@ -1,0 +1,52 @@
+import { PARTICLE_LIFETIME, PARTICLE_SPEED_MIN, PARTICLE_SPEED_MAX } from "@/game/constants";
+import { makePool, Pool } from "@/game/utils/pool";
+import { Particle } from "@/game/entities/types";
+import { randBetween } from "@/game/utils/math";
+
+export function createParticlePool(): Pool<Particle> {
+  return makePool<Particle>(() => ({
+    x: 0, y: 0,
+    vx: 0, vy: 0,
+    life: 0, maxLife: PARTICLE_LIFETIME,
+    r: 255, g: 255, b: 255,
+    size: 3,
+    alive: false,
+  }));
+}
+
+export function spawnParticles(
+  pool: Pool<Particle>,
+  x: number,
+  y: number,
+  count: number,
+  r: number,
+  g: number,
+  b: number,
+  sizeOverride?: number
+): void {
+  for (let i = 0; i < count; i++) {
+    const p = pool.get();
+    const angle = Math.random() * Math.PI * 2;
+    const speed = randBetween(PARTICLE_SPEED_MIN, PARTICLE_SPEED_MAX);
+    p.x       = x;
+    p.y       = y;
+    p.vx      = Math.cos(angle) * speed;
+    p.vy      = Math.sin(angle) * speed;
+    p.life    = PARTICLE_LIFETIME * randBetween(0.6, 1.0);
+    p.maxLife = p.life;
+    p.r = r; p.g = g; p.b = b;
+    p.size = sizeOverride ?? randBetween(2, 5);
+  }
+}
+
+export function updateParticles(pool: Pool<Particle>, dt: number): void {
+  for (const p of pool.living()) {
+    p.x  += p.vx * dt;
+    p.y  += p.vy * dt;
+    // Friction
+    p.vx *= 1 - dt * 4;
+    p.vy *= 1 - dt * 4;
+    p.life -= dt;
+    if (p.life <= 0) p.alive = false;
+  }
+}
