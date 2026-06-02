@@ -1,4 +1,4 @@
-import { WALL_T, WORLD_W, WORLD_H, PLAYER_RADIUS, BULLET_RADIUS, TANK_HP } from "@/game/constants";
+import { WALL_T, WORLD_W, WORLD_H, PLAYER_RADIUS, TANK_HP } from "@/game/constants";
 import { Player, Bullet, Enemy, Particle } from "@/game/entities/types";
 import { Pool } from "@/game/utils/pool";
 
@@ -52,29 +52,66 @@ function drawArena(ctx: CanvasRenderingContext2D, vp: Viewport): void {
   ctx.strokeRect(WALL_T, WALL_T, WORLD_W - WALL_T * 2, WORLD_H - WALL_T * 2);
 }
 
-// ─── Particles ────────────────────────────────────────────────────────────────
+// ─── Particles (additive blending) ───────────────────────────────────────────
 
 function drawParticles(ctx: CanvasRenderingContext2D, particles: Pool<Particle>): void {
+  // "lighter" composite adds RGB values of overlapping pixels together.
+  // On a dark background this creates a natural glow where particles overlap.
+  ctx.globalCompositeOperation = "lighter";
+
   for (const p of particles.living()) {
     const alpha = p.life / p.maxLife;
     ctx.globalAlpha = alpha;
     ctx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+    // Particles shrink slightly as they fade
+    ctx.arc(p.x, p.y, Math.max(0.5, p.size * alpha), 0, Math.PI * 2);
     ctx.fill();
   }
+
+  // Always restore both state values
+  ctx.globalCompositeOperation = "source-over";
   ctx.globalAlpha = 1;
 }
 
-// ─── Bullets ──────────────────────────────────────────────────────────────────
+// ─── Bullets (trail rendering) ────────────────────────────────────────────────
 
 function drawBullets(ctx: CanvasRenderingContext2D, bullets: Pool<Bullet>): void {
-  ctx.fillStyle = "#f0c040";
+  ctx.strokeStyle = "#f0c040";
+  ctx.lineCap = "round";
+
   for (const b of bullets.living()) {
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, BULLET_RADIUS, 0, Math.PI * 2);
-    ctx.fill();
+    const dx = b.x - b.prevX;
+    const dy = b.y - b.prevY;
+    const trailLen = Math.hypot(dx, dy);
+
+    if (trailLen < 1) {
+      // Bullet barely moved this frame — draw a dot fallback
+      ctx.fillStyle = "#f0c040";
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Draw trail: thick at head, extends back to previous position
+      // Two-pass: wide faint trail + narrow bright core
+      ctx.lineWidth = 5;
+      ctx.globalAlpha = 0.25;
+      ctx.beginPath();
+      ctx.moveTo(b.prevX, b.prevY);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.moveTo(b.prevX, b.prevY);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
   }
+
+  ctx.globalAlpha = 1;
+  ctx.lineCap = "butt";
 }
 
 // ─── Enemies ──────────────────────────────────────────────────────────────────
@@ -166,7 +203,7 @@ export function render(
   ctx.translate(-vp.camX, -vp.camY);
 
   drawArena(ctx, vp);
-  drawParticles(ctx, particles);
+  drawParticles(ctx, particles);  // drawn before bullets/enemies so glow sits underneath
   drawBullets(ctx, bullets);
   drawEnemies(ctx, enemies);
   drawPlayer(ctx, player);

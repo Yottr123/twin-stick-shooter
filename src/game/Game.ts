@@ -9,8 +9,14 @@ import { createParticlePool, spawnParticles, updateParticles } from "@/game/syst
 import { createWaveState, spawnWave, updateWaveState, WaveState } from "@/game/systems/WaveSpawner";
 import { render, Viewport } from "@/game/systems/Renderer";
 import { clamp } from "@/game/utils/math";
+import {
+  initAudio,
+  playShoot,
+  playEnemyDeath,
+  playPlayerHit,
+  playWaveStart,
+} from "@/game/utils/sound";
 
-// HUD snapshot passed up to React each frame
 export interface HUDState {
   hp: number;
   score: number;
@@ -27,23 +33,22 @@ export class Game {
   particles: Pool<Particle>;
 
   // ── Systems state
-  waveState:   WaveState;
-  fireTimer:   { current: number } = { current: 0 };
-  score:       number = 0;
+  waveState: WaveState;
+  fireTimer: { current: number } = { current: 0 };
+  score:     number = 0;
 
   // ── Rendering
-  ctx:    CanvasRenderingContext2D;
-  vp:     Viewport = { w: 0, h: 0, camX: 0, camY: 0 };
+  ctx: CanvasRenderingContext2D;
+  vp:  Viewport = { w: 0, h: 0, camX: 0, camY: 0 };
 
   constructor(canvas: HTMLCanvasElement) {
-    this.ctx      = canvas.getContext("2d")!;
-    this.player   = createPlayer();
-    this.bullets  = createBulletPool();
-    this.enemies  = createEnemyPool();
-    this.particles= createParticlePool();
-    this.waveState= createWaveState();
+    this.ctx       = canvas.getContext("2d")!;
+    this.player    = createPlayer();
+    this.bullets   = createBulletPool();
+    this.enemies   = createEnemyPool();
+    this.particles = createParticlePool();
+    this.waveState = createWaveState();
 
-    // Kick off first wave immediately
     spawnWave(this.waveState, this.enemies);
   }
 
@@ -57,30 +62,38 @@ export class Game {
     // ── Player
     updatePlayer(player, input, dt);
 
-    // ── Shooting
-    updateFiring(this.bullets, player, input, this.fireTimer, dt);
+    // ── Shooting — init audio on first click (browser autoplay policy)
+    const fired = updateFiring(this.bullets, this.particles, player, input, this.fireTimer, dt);
+    if (fired) {
+      initAudio();
+      playShoot();
+    }
 
-    // ── Bullets + hit detection
+    // ── Bullet update + hit detection
     const hits = updateBullets(this.bullets, this.enemies, dt);
     for (const { enemy, killed } of hits) {
       if (killed) {
         this.score += enemy.type === "tank" ? SCORE_TANK
                     : enemy.type === "fast" ? SCORE_FAST
                     : SCORE_BASIC;
-        // Particle colors by type
+
+        // Particle burst colors by type
         const [r, g, b] =
-          enemy.type === "tank"  ? [80, 80, 80]    :
-          enemy.type === "fast"  ? [60, 120, 200]  :
+          enemy.type === "tank"  ? [80, 80, 80]   :
+          enemy.type === "fast"  ? [60, 120, 200] :
                                    [200, 60, 60];
         spawnParticles(this.particles, enemy.x, enemy.y,
           enemy.type === "tank" ? 12 : 7, r, g, b);
+
+        playEnemyDeath(enemy.type);
       }
     }
 
-    // ── Enemies
+    // ── Enemy update + player contact
     const { playerHit } = updateEnemies(this.enemies, player, dt);
     if (playerHit) {
       spawnParticles(this.particles, player.x, player.y, 5, 220, 60, 60);
+      playPlayerHit();
       if (player.hp <= 0) {
         player.hp    = 0;
         player.alive = false;
@@ -91,12 +104,12 @@ export class Game {
     // ── Particles
     updateParticles(this.particles, dt);
 
-    // ── Wave management
-    updateWaveState(this.waveState, this.enemies, dt);
+    // ── Wave management — play sound when a new wave starts
+    const newWave = updateWaveState(this.waveState, this.enemies, dt);
+    if (newWave) playWaveStart();
   }
 
   renderFrame(canvas: HTMLCanvasElement): void {
-    // Update viewport / camera
     this.vp.w    = canvas.width;
     this.vp.h    = canvas.height;
     this.vp.camX = clamp(this.player.x - this.vp.w / 2, 0, Math.max(0, 1600 - this.vp.w));
