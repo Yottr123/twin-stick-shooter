@@ -65,6 +65,3 @@ src/
 ## Versioning
 
 See [CHANGELOG.md](./CHANGELOG.md) for the full roadmap.
-
-**Current**: v0.2.0 — Local project / architecture refactor  
-**Next**: v0.3.0 — Game feel pass (screen shake, additive particles, ZzFX sound)
