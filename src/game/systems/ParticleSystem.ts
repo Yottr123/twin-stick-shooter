@@ -1,4 +1,8 @@
-import { PARTICLE_LIFETIME, PARTICLE_SPEED_MIN, PARTICLE_SPEED_MAX } from "@/game/constants";
+import {
+  PARTICLE_LIFETIME, PARTICLE_SPEED_MIN, PARTICLE_SPEED_MAX,
+  MUZZLE_PARTICLE_COUNT, MUZZLE_PARTICLE_LIFETIME,
+  MUZZLE_PARTICLE_SPEED, MUZZLE_SPREAD_ANGLE,
+} from "@/game/constants";
 import { makePool, Pool } from "@/game/utils/pool";
 import { Particle } from "@/game/entities/types";
 import { randBetween } from "@/game/utils/math";
@@ -14,6 +18,7 @@ export function createParticlePool(): Pool<Particle> {
   }));
 }
 
+/** General-purpose burst — used for enemy death, player hit, etc. */
 export function spawnParticles(
   pool: Pool<Particle>,
   x: number,
@@ -35,7 +40,34 @@ export function spawnParticles(
     p.life    = PARTICLE_LIFETIME * randBetween(0.6, 1.0);
     p.maxLife = p.life;
     p.r = r; p.g = g; p.b = b;
-    p.size = sizeOverride ?? randBetween(2, 5);
+    p.size    = sizeOverride ?? randBetween(2, 5);
+  }
+}
+
+/**
+ * Muzzle flash — tight directional burst from barrel tip.
+ * Particles fan outward within MUZZLE_SPREAD_ANGLE either side of barrelAngle.
+ */
+export function spawnMuzzleFlash(
+  pool: Pool<Particle>,
+  x: number,
+  y: number,
+  barrelAngle: number
+): void {
+  for (let i = 0; i < MUZZLE_PARTICLE_COUNT; i++) {
+    const p = pool.get();
+    const spread = (Math.random() - 0.5) * 2 * MUZZLE_SPREAD_ANGLE;
+    const angle  = barrelAngle + spread;
+    const speed  = MUZZLE_PARTICLE_SPEED * randBetween(0.6, 1.0);
+    p.x       = x;
+    p.y       = y;
+    p.vx      = Math.cos(angle) * speed;
+    p.vy      = Math.sin(angle) * speed;
+    p.life    = MUZZLE_PARTICLE_LIFETIME * randBetween(0.7, 1.0);
+    p.maxLife = p.life;
+    // Warm yellow-white flash
+    p.r = 255; p.g = 220; p.b = 120;
+    p.size = randBetween(2, 4);
   }
 }
 

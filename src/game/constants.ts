@@ -4,16 +4,16 @@ export const WORLD_H = 1600;
 export const WALL_T  = 40;
 
 // ─── Player ───────────────────────────────────────────────────────────────────
-export const PLAYER_SPEED         = 260;   // px/s  — bumped up from 220 for snappier feel
+export const PLAYER_SPEED         = 260;
 export const PLAYER_RADIUS        = 14;
 export const PLAYER_MAX_HP        = 100;
-export const PLAYER_INVINCIBLE_MS = 800;   // ms of i-frames after hit
+export const PLAYER_INVINCIBLE_MS = 800;
 
 // ─── Bullets ──────────────────────────────────────────────────────────────────
-export const BULLET_SPEED    = 560;        // px/s  — slightly faster than v0.1
+export const BULLET_SPEED    = 560;
 export const BULLET_RADIUS   = 5;
-export const BULLET_LIFETIME = 1.4;        // seconds before auto-despawn
-export const FIRE_RATE       = 0.11;       // seconds between shots (tighter than v0.1)
+export const BULLET_LIFETIME = 1.4;
+export const FIRE_RATE       = 0.11;
 
 // ─── Enemy: Basic ─────────────────────────────────────────────────────────────
 export const BASIC_RADIUS = 16;
@@ -34,13 +34,19 @@ export const FAST_HP     = 1;
 export const FAST_DAMAGE = 8;
 
 // ─── Waves ────────────────────────────────────────────────────────────────────
-export const WAVE_BREAK_DURATION = 3.0;    // seconds between waves
-export const WAVE_SPEED_SCALE    = 0.06;   // speed increase per wave (multiplier)
+export const WAVE_BREAK_DURATION = 3.0;
+export const WAVE_SPEED_SCALE    = 0.06;
 
 // ─── Particles ────────────────────────────────────────────────────────────────
-export const PARTICLE_LIFETIME = 0.55;     // seconds
+export const PARTICLE_LIFETIME  = 0.55;
 export const PARTICLE_SPEED_MIN = 60;
 export const PARTICLE_SPEED_MAX = 140;
+
+// ─── Muzzle Flash ─────────────────────────────────────────────────────────────
+export const MUZZLE_PARTICLE_COUNT    = 4;
+export const MUZZLE_PARTICLE_LIFETIME = 0.12;  // very short — snap not linger
+export const MUZZLE_PARTICLE_SPEED    = 180;   // fast outward burst
+export const MUZZLE_SPREAD_ANGLE      = 0.5;   // radians either side of barrel angle
 
 // ─── Scoring ──────────────────────────────────────────────────────────────────
 export const SCORE_BASIC = 10;

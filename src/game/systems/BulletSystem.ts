@@ -1,8 +1,12 @@
-import { BULLET_SPEED, BULLET_RADIUS, BULLET_LIFETIME, FIRE_RATE, WALL_T, WORLD_W, WORLD_H, PLAYER_RADIUS } from "@/game/constants";
+import {
+  BULLET_SPEED, BULLET_RADIUS, BULLET_LIFETIME,
+  FIRE_RATE, WALL_T, WORLD_W, WORLD_H, PLAYER_RADIUS,
+} from "@/game/constants";
 import { makePool, Pool } from "@/game/utils/pool";
 import { circlesOverlap } from "@/game/utils/math";
-import { Bullet, Enemy, Player } from "@/game/entities/types";
+import { Bullet, Enemy, Particle, Player } from "@/game/entities/types";
 import { InputState } from "./InputManager";
+import { spawnMuzzleFlash } from "./ParticleSystem";
 
 export function createBulletPool(): Pool<Bullet> {
   return makePool<Bullet>(() => ({
@@ -15,10 +19,13 @@ export function createBulletPool(): Pool<Bullet> {
 }
 
 /**
- * Handles auto-fire logic. Returns true if a bullet was fired this frame.
+ * Handles auto-fire logic.
+ * Spawns a bullet and a muzzle flash when fire conditions are met.
+ * Returns true if a bullet was fired this frame.
  */
 export function updateFiring(
   bullets: Pool<Bullet>,
+  particles: Pool<Particle>,
   player: Player,
   input: InputState,
   fireTimerRef: { current: number },
@@ -28,13 +35,21 @@ export function updateFiring(
   if (!input.mouseDown || fireTimerRef.current > 0) return false;
 
   fireTimerRef.current = FIRE_RATE;
+
+  // Spawn bullet
   const b = bullets.get();
   const barrelLen = PLAYER_RADIUS + 8;
-  b.prevX = b.x = player.x + Math.cos(player.angle) * barrelLen;
-  b.prevY = b.y = player.y + Math.sin(player.angle) * barrelLen;
+  const bx = player.x + Math.cos(player.angle) * barrelLen;
+  const by = player.y + Math.sin(player.angle) * barrelLen;
+  b.prevX = b.x = bx;
+  b.prevY = b.y = by;
   b.vx   = Math.cos(player.angle) * BULLET_SPEED;
   b.vy   = Math.sin(player.angle) * BULLET_SPEED;
   b.life = BULLET_LIFETIME;
+
+  // Muzzle flash at barrel tip
+  spawnMuzzleFlash(particles, bx, by, player.angle);
+
   return true;
 }
 
@@ -44,9 +59,8 @@ export interface BulletHitResult {
 }
 
 /**
- * Moves bullets, despawns out-of-bounds/expired ones,
- * and checks collisions against enemies.
- * Returns a list of hit results for this frame.
+ * Moves bullets, records previous position for trail rendering,
+ * despawns out-of-bounds/expired ones, and checks enemy collisions.
  */
 export function updateBullets(
   bullets: Pool<Bullet>,
@@ -56,6 +70,7 @@ export function updateBullets(
   const hits: BulletHitResult[] = [];
 
   for (const b of bullets.living()) {
+    // Store previous position before moving (used by Renderer for trails)
     b.prevX = b.x;
     b.prevY = b.y;
     b.x += b.vx * dt;

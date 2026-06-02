@@ -6,7 +6,7 @@ Versions follow the roadmap established during prototyping.
 ---
 
 ## [v0.1.0] — Initial Prototype (Artifact)
-**Status**: Complete  
+**Status**: Complete
 **Format**: Single-file React artifact (browser only)
 
 ### Added
@@ -24,8 +24,8 @@ Versions follow the roadmap established during prototyping.
 
 ---
 
-## [v0.2.0] — Local Project / Refactor
-**Status**: Complete  
+## [v0.2.0] — Local Project / Architecture Refactor
+**Status**: Complete
 **Format**: Vite + React + TypeScript local project
 
 ### Changed
@@ -58,15 +58,37 @@ Versions follow the roadmap established during prototyping.
 
 ---
 
-## [v0.3.0] — Game Feel Pass *(Planned)*
-- Screen shake on hit and on wave start
-- Additive blend mode particles (Geometry Wars-style glow)
-- Bullet motion trails (prevX/prevY already stored on Bullet entity)
-- ZzFX sound synthesis: shoot, enemy death, player hit, wave start
-- Muzzle flash particle burst on fire
+## [v0.3.0] — Game Feel Pass
+**Status**: Complete
 
-## [v0.4.0] — PixiJS Migration *(Planned)*
+### Added
+- **Additive blend particles** — `globalCompositeOperation = "lighter"` on particle draw pass; overlapping particles add color values producing a natural glow on the dark background
+- **Bullet motion trails** — bullets rendered as lines from `(prevX, prevY)` to `(x, y)` instead of circles; faster bullets produce longer streaks naturally
+- **Muzzle flash** — small particle burst at barrel tip on every shot; warm yellow/white, 4 particles, tight spread
+- **ZzFX sound synthesis** — zero-dependency procedural audio via Web Audio API; sounds synthesized from numeric parameters, no audio files needed
+  - `playShoot()` — short high-pitched snap
+  - `playEnemyDeath(type)` — varies by enemy type; basic=pop, fast=zap, tank=thud
+  - `playPlayerHit()` — low distorted thud
+  - `playWaveStart()` — brief ascending sweep
+- AudioContext initialized on first user interaction (browser autoplay policy compliance)
+
+### Deferred
+- **Screen shake** — moved to v0.4; want to nail the PixiJS migration first so shake is implemented once in the new renderer rather than twice
+
+### Files changed
+- `CHANGELOG.md`
+- `src/game/constants.ts` — muzzle flash tuning constants
+- `src/game/utils/sound.ts` — new file; ZzFX + named sound functions
+- `src/game/systems/ParticleSystem.ts` — muzzle flash spawn helper added
+- `src/game/systems/BulletSystem.ts` — muzzle flash triggered on fire
+- `src/game/systems/Renderer.ts` — additive blending, bullet trail rendering
+- `src/game/Game.ts` — sound calls wired to game events
+
+---
+
+## [v0.4.0] — PixiJS Migration + Screen Shake *(Planned)*
 - Replace Canvas 2D renderer (`Renderer.ts`) with PixiJS WebGL renderer
+- Screen shake on player hit, player death, and wave start
 - Bloom/glow filter via PixiJS BlurFilter composite
 - Sprite batching for large particle counts
 - Neon aesthetic pass
